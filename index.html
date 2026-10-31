@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>「ツメ指示」当てゲーム・アニメーター中割り体験</title>
+<style>
+:root{--bg:#eef2f1;--fg:#1d2a2a;--mute:#5d6b6a;--card:#fbfdfc;--line:#c3cfcc;--a:#d6403f;--b:#2a8bc9;--ok:#1f9254;--btn:#1d2a2a;--btnfg:#fbfdfc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141b1b;--fg:#e6efed;--mute:#9bacaa;--card:#1d2626;--line:#374443;--a:#f0625f;--b:#5cb4ea;--ok:#4cc585;--btn:#e6efed;--btnfg:#141b1b}}
+:root[data-theme="dark"]{--bg:#141b1b;--fg:#e6efed;--mute:#9bacaa;--card:#1d2626;--line:#374443;--a:#f0625f;--b:#5cb4ea;--ok:#4cc585;--btn:#e6efed;--btnfg:#141b1b}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 "Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;background:var(--bg)}
+main{max-width:480px;margin:0 auto;padding:16px 16px 32px}
+h1{font-size:20px;line-height:1.4;margin:4px 0 12px;letter-spacing:.02em}
+.lv{display:flex;gap:6px;margin-bottom:12px}
+.lv button{flex:1;padding:8px 0;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;font:inherit;font-size:14px}
+.lv button[aria-pressed="true"]{background:var(--btn);color:var(--btnfg);border-color:var(--btn)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.q{margin:0 0 4px;font-weight:600}
+.sub{margin:0 0 8px;color:var(--mute);font-size:13px}
+svg{display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none;margin:6px 0}
+.row{display:flex;gap:8px;margin-top:12px}
+.row button{flex:1;padding:11px 0;border-radius:8px;font:inherit;font-weight:600;border:1px solid var(--btn);background:transparent;color:var(--fg)}
+.row button.main{background:var(--btn);color:var(--btnfg)}
+.row button:disabled{opacity:.35}
+button:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+#res{margin-top:12px}
+.score{font-size:40px;font-weight:700;line-height:1.1}
+.score small{font-size:16px;margin-left:4px;font-weight:500}
+#res ul{margin:6px 0;padding-left:20px}
+.mute{color:var(--mute);font-size:13px;margin:6px 0 0}
+.tg{padding:4px 12px;margin:0 0 2px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--fg);font:inherit;font-size:13px}
+#rv svg{touch-action:auto}
+.tgs{display:flex;gap:6px;margin:8px 0}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.top .tg{flex:none;margin-top:4px;white-space:nowrap}
+.desc{margin:0 0 12px;white-space:pre-line;font-size:14px}
+.tg[aria-pressed="false"]{opacity:.55}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><h1 id="ttl">「ツメ指示」当てゲーム・アニメーター中割り体験</h1><button id="lg" class="tg" aria-label="Language">English</button></div>
+<p class="desc" id="desc">AからBまでの間に、お題の動きの文章に合わせて、
+1個〜4個のツメ指示を移動させて下さい。
+ガイド線をOFFにすると、⚫︎だけ表示されます。</p>
+<div class="lv" id="lv">
+<button data-l="1" aria-pressed="true">初級 1枚</button>
+<button data-l="2" aria-pressed="false">中級 2枚</button>
+<button data-l="3" aria-pressed="false">上級 3枚</button>
+<button data-l="4" aria-pressed="false">特級 4枚</button>
+</div>
+<div class="lv" id="md"><button data-m="line" aria-pressed="true">直線の動き</button><button data-m="arc" aria-pressed="false">弧を描く動き</button></div>
+<div class="card" id="mc">
+<p class="q" id="q"></p>
+<p class="sub" id="sub"></p>
+<button id="gd" class="tg" aria-pressed="true">ガイド線：ON</button>
+<svg id="svg" viewBox="0 0 360 150" role="img" aria-label="原画Aと原画Bの間に中割りを置く線"></svg>
+<div class="row">
+<button id="play">再生</button>
+<button id="grade" class="main">採点</button>
+<button id="next">次の問題</button>
+</div>
+<div id="res"></div>
+</div>
+<div class="card" id="rv" hidden>
+<p class="q" id="rvh">5問の振り返り</p>
+<div class="score" id="rvs"></div>
+<p class="mute" id="rvg">黒い丸があなたの回答、緑の点線の丸が正解です。動く丸は1秒8コマの再生です。</p>
+<div class="tgs" id="rvt"><button class="tg" data-r="line" data-n="線" aria-pressed="true">線：ON</button><button class="tg" data-r="text" data-n="文字" aria-pressed="true">文字：ON</button><button class="tg" data-r="ring" data-n="○枠" aria-pressed="true">○枠：ON</button></div>
+<div id="rvl"></div>
+<div class="row"><button id="again" class="main">もう一度5問やる</button></div>
+</div>
+<p class="mute" id="hint">5問で1セットです。丸をドラッグして中割りの位置を決め、「採点」を押します。「再生」で1秒8コマの動きを確認できます。</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const W=360;
+const EAS={
+lin:{n:"一定の速さ",f:t=>t,t:"一定の速さなので、間隔はどこも同じです。"},
+in:{n:"ゆっくり出て、だんだん速く",f:t=>t*t,t:"Aの近くに絵が集まり、Bに向かって間隔が広がります。"},
+out:{n:"速く出て、ゆっくり止まる",f:t=>1-(1-t)*(1-t),t:"Bの近くに絵が集まり、Aに近いほど間隔が広がります。"},
+io:{n:"ゆっくり出て、ゆっくり止まる",f:t=>t*t*(3-2*t),t:"両端の近くに絵が集まり、中央の間隔がいちばん広くなります。"}
+};
+const LV={1:{n:1,k:["lin","in","out"]},2:{n:2,k:["in","out","io"]},3:{n:3,k:["in","out","io"]},4:{n:4,k:["in","out","io"]}};
+let lv=1,md="line",guide=true,Qs=[],rt=null,q,drag=-1,timer=null,inRv=false,rv={line:true,text:true,ring:true};
+const rnd=(a,b)=>a+Math.random()*(b-a);
+let lang="ja";const tr=(j,e)=>lang=="en"?e:j;
+const EN={lin:{n:"Constant speed",t:"Constant speed, so the spacing is the same everywhere."},in:{n:"Starts slow, speeds up",t:"Drawings cluster near A, and the spacing widens toward B."},out:{n:"Starts fast, slows to a stop",t:"Drawings cluster near B, and the spacing is widest near A."},io:{n:"Slow start, slow stop",t:"Drawings cluster near both ends; the spacing is widest in the middle."}};
+const RVN={line:["線","Line"],text:["文字","Text"],ring:["○枠","Circles"]};
+function rvBtn(b){const k=b.dataset.r;b.textContent=tr(RVN[k][0],RVN[k][1])+tr("：",": ")+(rv[k]?"ON":"OFF");b.setAttribute("aria-pressed",rv[k]);}
+function texts(){const n=q.done?Qs.length:Qs.length+1,N=q.N;
+$("q").textContent=tr("第"+n+"問 / 5　動き：「"+EAS[q.k].n+"」","Q"+n+" / 5　Motion: “"+EN[q.k].n+"”");
+$("sub").textContent=tr("コマ：A（1）→ 中割り"+N+"枚 → B（"+(N+2)+"）"+(q.arc?"　弧に沿って置く":""),"Frames: A (1) → "+N+" in-between"+(N>1?"s":"")+" → B ("+(N+2)+")"+(q.arc?" – Place along the arc":""));}
+function applyLang(){
+const en=lang=="en";
+document.documentElement.lang=en?"en":"ja";
+const tt=tr("「ツメ指示」当てゲーム・アニメーター中割り体験","“Tsume Shiji” Guessing Game – Animator In-Betweening Experience");
+document.title=tt;$("ttl").textContent=tt;
+$("lg").textContent=en?"日本語":"English";
+const ln=tr(["初級 1枚","中級 2枚","上級 3枚","特級 4枚"],["Easy · 1","Medium · 2","Hard · 3","Expert · 4"]);
+document.querySelectorAll("#lv button").forEach((b,i)=>b.textContent=ln[i]);
+const mn=tr(["直線の動き","弧を描く動き"],["Straight motion","Arc motion"]);
+document.querySelectorAll("#md button").forEach((b,i)=>b.textContent=mn[i]);
+$("gd").textContent=tr("ガイド線：","Guide line: ")+(guide?"ON":"OFF");
+$("grade").textContent=tr("採点","Check");
+$("play").textContent=timer?tr("停止","Stop"):tr("再生","Play");
+$("next").textContent=q&&q.done&&Qs.length>=5?tr("振り返りを見る","View review"):tr("次の問題","Next question");
+$("hint").textContent=tr("5問で1セットです。丸をドラッグして中割りの位置を決め、「採点」を押します。「再生」で1秒8コマの動きを確認できます。","One set is 5 questions. Drag the circles to place the in-betweens, then press “Check”. “Play” shows the motion at 8 frames per second. The number on each level is the number of in-betweens.");
+$("desc").textContent=tr("AからBまでの間に、お題の動きの文章に合わせて、\n1個〜4個のツメ指示を移動させて下さい。\nガイド線をOFFにすると、⚫︎だけ表示されます。","Between A and B, move 1 to 4 “tsume-shiji” (in-between spacing marks) to match the motion in the prompt.\nTurn the guide line OFF and only the dots are shown.");
+$("rvh").textContent=tr("5問の振り返り","Review of 5 questions");
+$("rvg").textContent=tr("黒い丸があなたの回答、緑の点線の丸が正解です。動く丸は1秒8コマの再生です。","Black circles are your answers; green dashed circles are the correct positions. The moving dot plays at 8 frames per second.");
+$("again").textContent=tr("もう一度5問やる","Play 5 more");
+document.querySelectorAll("#rvt button").forEach(rvBtn);
+if(q)texts();
+if(!$("rv").hidden)showReview();else if(q&&q.done&&q.sr)q.sr();
+}
+const pt=s=>{const u=1-s;return [u*u*q.ax+2*u*s*q.cx+s*s*q.bx,u*u*q.ay+2*u*s*q.cy+s*s*q.by];};
+function newQ(){
+stop();
+const L=LV[lv],pk=Qs.length?Qs[Qs.length-1].k:null,ks=L.k.filter(x=>x!==pk),k=ks[Math.floor(Math.random()*ks.length)];
+let ax=30,bx=330;
+if(lv>1){const m=lv==3?110:lv==4?70:60;ax=rnd(24,m);bx=W-rnd(24,m);}
+const pos=Array.from({length:L.n},()=>rnd(.15,.85)).sort((a,b)=>a-b);
+const arc=md=="arc",ay=arc?100+rnd(-20,20):75,by=arc?100+rnd(-20,20):75,cy=arc?100+(Math.random()<.5?-1:1)*rnd(80,120):75;
+q={k,N:L.n,arc,ax,ay,bx,by,cx:(ax+bx)/2+(arc?rnd(-30,30):0),cy,pos,done:false,ans:Array.from({length:L.n},(_,i)=>EAS[k].f((i+1)/(L.n+1)))};
+texts();
+$("svg").setAttribute("viewBox",arc?"0 0 360 190":"0 0 360 150");
+$("res").innerHTML="";
+$("grade").disabled=false;$("next").classList.remove("main");$("grade").classList.add("main");$("next").disabled=true;$("next").textContent=tr("次の問題","Next question");
+draw();
+}
+function key(x,y,c,l){return `<circle cx="${x}" cy="${y}" r="15" fill="${c}"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${l}</text>`;}
+function build(ph){const sh=guide||q.done,o=inRv?rv:timer?{line:0,text:0,ring:0}:{line:sh,text:sh,ring:1,dot:!sh};
+let s=`<path d="M${q.ax} ${q.ay}Q${q.cx} ${q.cy} ${q.bx} ${q.by}" fill="none" stroke="${o.line?"var(--line)":"none"}" stroke-width="3" stroke-linecap="round"/>`;
+s+=key(q.ax,q.ay,"var(--a)",o.text?"A":"")+key(q.bx,q.by,"var(--b)",o.text?"B":"");
+if(q.done){
+if(!q.arc&&o.text)s+=`<text x="${q.ax-14}" y="146" font-size="12" fill="var(--ok)">${tr("正解の位置","Correct")}</text>`;
+q.ans.forEach((t,i)=>{const [x,y0]=pt(t),y=y0+(q.arc?0:37);
+s+=`${q.arc||!o.line?"":`<line x1="${x}" x2="${x}" y1="${y0}" y2="${y}" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="3 3"/>`}${o.ring?`<circle cx="${x}" cy="${y}" r="12" fill="none" stroke="var(--ok)" stroke-width="2" stroke-dasharray="4 3"/>`:""}${o.text?`<text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" fill="var(--ok)">${i+1}</text>`:""}`;});
+}
+q.pos.forEach((t,i)=>{const [x,y]=pt(t);
+s+=`<g data-i="${i}" style="cursor:grab">${o.ring?`<circle cx="${x}" cy="${y}" r="14" fill="${o.dot?"var(--fg)":"var(--card)"}" stroke="var(--fg)" stroke-width="2.5"/>`:""}${o.text?`<text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" fill="var(--fg)" pointer-events="none">${i+1}</text>`:""}</g>`;});
+if(ph){
+{const [x,y]=pt(ph.u);s+=`<circle cx="${x}" cy="${y}" r="7" fill="var(--fg)" pointer-events="none"/>`;}
+if(ph.c!=null){const [x,y]=pt(ph.c);s+=`<circle cx="${x}" cy="${y+(q.arc?0:37)}" r="${q.arc?5:7}" fill="var(--ok)" pointer-events="none"/>`;}
+}
+return s;}
+function draw(ph){$("svg").innerHTML=build(ph);
+}
+function stop(){clearInterval(timer);timer=null;$("play").textContent=tr("再生","Play");if(q)draw();}
+function play(){
+if(timer){stop();return;}
+const u=[0,...q.pos.slice().sort((a,b)=>a-b),1],c=[0,...q.ans,1];
+let i=0;$("play").textContent=tr("停止","Stop");
+const tk=()=>{const k=Math.min(i%(u.length+2),u.length-1);draw({u:u[k],c:q.done?c[k]:null});i++;};timer=setInterval(tk,125);tk();
+}
+function grade(){
+stop();
+q.pos.sort((a,b)=>a-b);q.done=true;
+const e=q.pos.map((t,i)=>Math.abs(t-q.ans[i]));
+const p=e.map(x=>Math.max(0,1-x/.12));
+const sc=Math.round(p.reduce((a,b)=>a+b,0)/p.length*100);
+q.sc=sc;Qs.push(q);
+const lab=x=>x<.04?tr("◎ ぴったり","◎ Spot on"):x<.08?tr("○ 近い","○ Close"):tr("△ ズレあり","△ Off");
+q.sr=()=>$("res").innerHTML=`<div class="score">${sc}<small>${tr("点"," pts")}</small></div><ul>${e.map((x,i)=>`<li>${tr((i+1)+"枚目　","#"+(i+1)+"　")}${lab(x)}</li>`).join("")}</ul><p style="margin:6px 0">${tr(EAS[q.k].t,EN[q.k].t)}</p><p class="mute">${tr("緑の点線の丸が正解の位置です。","Green dashed circles show the correct positions.")}</p>`;
+q.sr();$("grade").disabled=true;$("grade").classList.remove("main");$("next").classList.add("main");$("next").disabled=false;$("next").textContent=Qs.length>=5?tr("振り返りを見る","View review"):tr("次の問題","Next question");
+draw();
+}
+const svg=$("svg");
+function pp(ev){const r=svg.getBoundingClientRect(),v=svg.viewBox.baseVal;return [(ev.clientX-r.left)/r.width*v.width,(ev.clientY-r.top)/r.height*v.height];}
+svg.addEventListener("pointerdown",ev=>{
+const g=ev.target.closest("[data-i]");
+if(!g||q.done)return;
+if(timer)stop();
+drag=+g.dataset.i;svg.setPointerCapture(ev.pointerId);
+});
+svg.addEventListener("pointermove",ev=>{
+if(drag<0)return;
+const [mx,my]=pp(ev);let bs=0,bd=1e9;for(let i=0;i<=200;i++){const [x,y]=pt(i/200),d=(x-mx)**2+(y-my)**2;if(d<bd){bd=d;bs=i/200;}}q.pos[drag]=bs;
+draw();
+});
+const end=()=>{if(drag<0)return;drag=-1;q.pos.sort((a,b)=>a-b);draw();};
+svg.addEventListener("pointerup",end);
+svg.addEventListener("pointercancel",end);
+$("play").onclick=play;
+$("grade").onclick=grade;
+$("next").onclick=()=>Qs.length>=5?showReview():newQ();
+$("lv").onclick=ev=>{
+const b=ev.target.closest("button");if(!b)return;
+lv=+b.dataset.l;
+document.querySelectorAll("#lv button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+newSet();
+};
+$("md").onclick=ev=>{const b=ev.target.closest("button");if(!b)return;md=b.dataset.m;document.querySelectorAll("#md button").forEach(x=>x.setAttribute("aria-pressed",x===b));newSet();};
+function newSet(){clearInterval(rt);rt=null;Qs=[];$("mc").hidden=false;$("rv").hidden=true;newQ();}
+function showReview(){
+stop();
+$("mc").hidden=true;$("rv").hidden=false;
+const avg=Math.round(Qs.reduce((a,b)=>a+b.sc,0)/Qs.length);
+$("rvs").innerHTML=avg+"<small>"+tr("点（5問の平均）"," pts (average of 5)")+"</small>";
+$("rvl").innerHTML=Qs.map((Q,i)=>`<p class="sub" style="margin-top:12px"><b>${tr("第"+(i+1)+"問","Q"+(i+1))}</b>　${tr(EAS[Q.k].n,EN[Q.k].n)}　${Q.sc}${tr("点"," pts")}</p><svg id="rv${i}" viewBox="0 0 360 ${Q.arc?190:150}" role="img" aria-label="${tr("第"+(i+1)+"問の回答の再生","Playback of answer "+(i+1))}"></svg>`).join("");
+let f=0;
+const tick=()=>{const keep=q;inRv=true;Qs.forEach((Q,i)=>{q=Q;const u=[0,...Q.pos,1],c=[0,...Q.ans,1],k=Math.min(f%(u.length+2),u.length-1);$("rv"+i).innerHTML=build({u:u[k],c:c[k]});});q=keep;inRv=false;f++;};
+tick();clearInterval(rt);rt=setInterval(tick,125);
+window.scrollTo(0,0);
+}
+$("again").onclick=newSet;
+$("rvt").onclick=ev=>{const b=ev.target.closest("button");if(!b)return;const k=b.dataset.r;rv[k]=!rv[k];rvBtn(b);};
+$("lg").onclick=()=>{lang=lang=="en"?"ja":"en";applyLang();};
+$("gd").onclick=()=>{guide=!guide;$("gd").setAttribute("aria-pressed",guide);$("gd").textContent=tr("ガイド線：","Guide line: ")+(guide?"ON":"OFF");if(q)draw();};
+newSet();
+</script>
+</body>
+</html>
