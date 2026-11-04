@@ -10,7 +10,7 @@
 :root[data-theme="dark"]{--bg:#141b1b;--fg:#e6efed;--mute:#9bacaa;--card:#1d2626;--line:#374443;--a:#f0625f;--b:#5cb4ea;--ok:#4cc585;--btn:#e6efed;--btnfg:#141b1b}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font:16px/1.6 "Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;background:var(--bg)}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 "Hiragino Sans","Noto Sans JP","Yu Gothic","Apple SD Gothic Neo","Malgun Gothic","PingFang SC","Microsoft YaHei","Noto Sans Arabic","Segoe UI",system-ui,sans-serif;background:var(--bg)}
 main{max-width:480px;margin:0 auto;padding:16px 16px 32px}
 h1{font-size:20px;line-height:1.4;margin:4px 0 12px;letter-spacing:.02em}
 .lv{display:flex;gap:6px;margin-bottom:12px}
@@ -19,7 +19,7 @@ h1{font-size:20px;line-height:1.4;margin:4px 0 12px;letter-spacing:.02em}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
 .q{margin:0 0 4px;font-weight:600}
 .sub{margin:0 0 8px;color:var(--mute);font-size:13px}
-svg{display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none;margin:6px 0}
+svg{display:block;direction:ltr;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none;margin:6px 0}
 .row{display:flex;gap:8px;margin-top:12px}
 .row button{flex:1;padding:11px 0;border-radius:8px;font:inherit;font-weight:600;border:1px solid var(--btn);background:transparent;color:var(--fg)}
 .row button.main{background:var(--btn);color:var(--btnfg)}
@@ -27,8 +27,8 @@ svg{display:block;width:100%;height:auto;touch-action:none;user-select:none;-web
 button:focus-visible{outline:3px solid var(--b);outline-offset:2px}
 #res{margin-top:12px}
 .score{font-size:40px;font-weight:700;line-height:1.1}
-.score small{font-size:16px;margin-left:4px;font-weight:500}
-#res ul{margin:6px 0;padding-left:20px}
+.score small{font-size:16px;margin-inline-start:4px;font-weight:500}
+#res ul{margin:6px 0;padding-inline-start:20px}
 .mute{color:var(--mute);font-size:13px;margin:6px 0 0}
 .tg{padding:4px 12px;margin:0 0 2px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--fg);font:inherit;font-size:13px}
 #rv svg{touch-action:auto}
@@ -37,11 +37,12 @@ button:focus-visible{outline:3px solid var(--b);outline-offset:2px}
 .top .tg{flex:none;margin-top:4px;white-space:nowrap}
 .desc{margin:0 0 12px;white-space:pre-line;font-size:14px}
 .tg[aria-pressed="false"]{opacity:.55}
+select.tg{padding:4px 8px;max-width:140px;cursor:pointer}
 </style>
 </head>
 <body>
 <main>
-<div class="top"><h1 id="ttl">「ツメ指示」当てゲーム・アニメーター中割り体験</h1><button id="lg" class="tg" aria-label="Language">English</button></div>
+<div class="top"><h1 id="ttl">「ツメ指示」当てゲーム・アニメーター中割り体験</h1><select id="lg" class="tg" aria-label="Language"><option value="ja">日本語</option><option value="en">English</option><option value="ko">한국어</option><option value="zh">中文</option><option value="fr">Français</option><option value="es">Español</option><option value="ar">العربية</option></select></div>
 <p class="desc" id="desc">AからBまでの間に、お題の動きの文章に合わせて、
 1個〜4個のツメ指示を移動させて下さい。
 ガイド線をOFFにすると、⚫︎だけ表示されます。</p>
@@ -77,41 +78,129 @@ button:focus-visible{outline:3px solid var(--b);outline-offset:2px}
 <script>
 const $=id=>document.getElementById(id);
 const W=360;
-const EAS={
-lin:{n:"一定の速さ",f:t=>t,t:"一定の速さなので、間隔はどこも同じです。"},
-in:{n:"ゆっくり出て、だんだん速く",f:t=>t*t,t:"Aの近くに絵が集まり、Bに向かって間隔が広がります。"},
-out:{n:"速く出て、ゆっくり止まる",f:t=>1-(1-t)*(1-t),t:"Bの近くに絵が集まり、Aに近いほど間隔が広がります。"},
-io:{n:"ゆっくり出て、ゆっくり止まる",f:t=>t*t*(3-2*t),t:"両端の近くに絵が集まり、中央の間隔がいちばん広くなります。"}
-};
+const EAS={lin:{f:t=>t},in:{f:t=>t*t},out:{f:t=>1-(1-t)*(1-t)},io:{f:t=>t*t*(3-2*t)}};
 const LV={1:{n:1,k:["lin","in","out"]},2:{n:2,k:["in","out","io"]},3:{n:3,k:["in","out","io"]},4:{n:4,k:["in","out","io"]}};
 let lv=1,md="line",guide=true,Qs=[],rt=null,q,drag=-1,timer=null,inRv=false,rv={line:true,text:true,ring:true};
 const rnd=(a,b)=>a+Math.random()*(b-a);
-let lang="ja";const tr=(j,e)=>lang=="en"?e:j;
-const EN={lin:{n:"Constant speed",t:"Constant speed, so the spacing is the same everywhere."},in:{n:"Starts slow, speeds up",t:"Drawings cluster near A, and the spacing widens toward B."},out:{n:"Starts fast, slows to a stop",t:"Drawings cluster near B, and the spacing is widest near A."},io:{n:"Slow start, slow stop",t:"Drawings cluster near both ends; the spacing is widest in the middle."}};
-const RVN={line:["線","Line"],text:["文字","Text"],ring:["○枠","Circles"]};
-function rvBtn(b){const k=b.dataset.r;b.textContent=tr(RVN[k][0],RVN[k][1])+tr("：",": ")+(rv[k]?"ON":"OFF");b.setAttribute("aria-pressed",rv[k]);}
-function texts(){const n=q.done?Qs.length:Qs.length+1,N=q.N;
-$("q").textContent=tr("第"+n+"問 / 5　動き：「"+EAS[q.k].n+"」","Q"+n+" / 5　Motion: “"+EN[q.k].n+"”");
-$("sub").textContent=tr("コマ：A（1）→ 中割り"+N+"枚 → B（"+(N+2)+"）"+(q.arc?"　弧に沿って置く":""),"Frames: A (1) → "+N+" in-between"+(N>1?"s":"")+" → B ("+(N+2)+")"+(q.arc?" – Place along the arc":""));}
+/* ---------- i18n ---------- */
+const NB="\u00a0";
+const D={
+ja:{code:"ja",title:"「ツメ指示」当てゲーム・アニメーター中割り体験",
+lv:["初級 1枚","中級 2枚","上級 3枚","特級 4枚"],md:["直線の動き","弧を描く動き"],
+gd:"ガイド線：",on:"ON",off:"OFF",col:"：",rv:{line:"線",text:"文字",ring:"○枠"},
+check:"採点",play:"再生",stop:"停止",next:"次の問題",viewRv:"振り返りを見る",
+hint:"5問で1セットです。丸をドラッグして中割りの位置を決め、「採点」を押します。「再生」で1秒8コマの動きを確認できます。",
+desc:"AからBまでの間に、お題の動きの文章に合わせて、\n1個〜4個のツメ指示を移動させて下さい。\nガイド線をOFFにすると、⚫︎だけ表示されます。",
+rvh:"5問の振り返り",rvg:"黒い丸があなたの回答、緑の点線の丸が正解です。動く丸は1秒8コマの再生です。",again:"もう一度5問やる",
+q:(n,m)=>"第"+n+"問 / 5　動き：「"+m+"」",
+sub:(N,B,arc)=>"コマ：A（1）→ 中割り"+N+"枚 → B（"+B+"）"+(arc?"　弧に沿って置く":""),
+correct:"正解の位置",lab:["◎ ぴったり","○ 近い","△ ズレあり"],pts:"点",item:i=>i+"枚目　",
+green:"緑の点線の丸が正解の位置です。",avg:"点（5問の平均）",rvQ:i=>"第"+i+"問",rvAria:i=>"第"+i+"問の回答の再生",
+svgAria:"原画Aと原画Bの間に中割りを置く線",
+e:{lin:["一定の速さ","一定の速さなので、間隔はどこも同じです。"],in:["ゆっくり出て、だんだん速く","Aの近くに絵が集まり、Bに向かって間隔が広がります。"],out:["速く出て、ゆっくり止まる","Bの近くに絵が集まり、Aに近いほど間隔が広がります。"],io:["ゆっくり出て、ゆっくり止まる","両端の近くに絵が集まり、中央の間隔がいちばん広くなります。"]}},
+en:{code:"en",title:"“Tsume Shiji” Guessing Game – Animator In-Betweening Experience",
+lv:["Easy · 1","Medium · 2","Hard · 3","Expert · 4"],md:["Straight motion","Arc motion"],
+gd:"Guide line: ",on:"ON",off:"OFF",col:": ",rv:{line:"Line",text:"Text",ring:"Circles"},
+check:"Check",play:"Play",stop:"Stop",next:"Next question",viewRv:"View review",
+hint:"One set is 5 questions. Drag the circles to place the in-betweens, then press “Check”. “Play” shows the motion at 8 frames per second. The number on each level is the number of in-betweens.",
+desc:"Between A and B, move 1 to 4 “tsume-shiji” (in-between spacing marks) to match the motion in the prompt.\nTurn the guide line OFF and only the dots are shown.",
+rvh:"Review of 5 questions",rvg:"Black circles are your answers; green dashed circles are the correct positions. The moving dot plays at 8 frames per second.",again:"Play 5 more",
+q:(n,m)=>"Q"+n+" / 5　Motion: “"+m+"”",
+sub:(N,B,arc)=>"Frames: A (1) → "+N+" in-between"+(N>1?"s":"")+" → B ("+B+")"+(arc?" – Place along the arc":""),
+correct:"Correct",lab:["◎ Spot on","○ Close","△ Off"],pts:" pts",item:i=>"#"+i+"　",
+green:"Green dashed circles show the correct positions.",avg:" pts (average of 5)",rvQ:i=>"Q"+i,rvAria:i=>"Playback of answer "+i,
+svgAria:"Line for placing in-betweens between key drawings A and B",
+e:{lin:["Constant speed","Constant speed, so the spacing is the same everywhere."],in:["Starts slow, speeds up","Drawings cluster near A, and the spacing widens toward B."],out:["Starts fast, slows to a stop","Drawings cluster near B, and the spacing is widest near A."],io:["Slow start, slow stop","Drawings cluster near both ends; the spacing is widest in the middle."]}},
+ko:{code:"ko",title:"「츠메 지시」 맞히기 게임 · 애니메이터 중간 그림 체험",
+lv:["초급 · 1장","중급 · 2장","상급 · 3장","특급 · 4장"],md:["직선 움직임","호를 그리는 움직임"],
+gd:"가이드선: ",on:"ON",off:"OFF",col:": ",rv:{line:"선",text:"글자",ring:"○ 테두리"},
+check:"채점",play:"재생",stop:"정지",next:"다음 문제",viewRv:"돌아보기 보기",
+hint:"5문제가 한 세트입니다. 원을 드래그해 중간 그림의 위치를 정하고 「채점」을 누르세요. 「재생」으로 1초 8프레임의 움직임을 확인할 수 있습니다. 각 난이도의 숫자는 중간 그림의 장수입니다.",
+desc:"A에서 B 사이에, 제시된 움직임 설명에 맞춰\n1~4개의 츠메 지시(간격 표시)를 움직여 배치하세요.\n가이드선을 OFF로 하면 ●만 표시됩니다.",
+rvh:"5문제 돌아보기",rvg:"검은 원은 내 답, 초록 점선 원은 정답입니다. 움직이는 점은 1초 8프레임으로 재생됩니다.",again:"다시 5문제 풀기",
+q:(n,m)=>n+"번 / 5　움직임: 「"+m+"」",
+sub:(N,B,arc)=>"프레임: A(1) → 중간 그림 "+N+"장 → B("+B+")"+(arc?" – 호를 따라 배치":""),
+correct:"정답 위치",lab:["◎ 딱 맞음","○ 가까움","△ 어긋남"],pts:"점",item:i=>i+"번째　",
+green:"초록 점선 원이 정답 위치입니다.",avg:"점 (5문제 평균)",rvQ:i=>i+"번",rvAria:i=>i+"번 답안 재생",
+svgAria:"원화 A와 B 사이에 중간 그림을 배치하는 선",
+e:{lin:["일정한 속도","일정한 속도이므로 간격이 어디서나 같습니다."],in:["천천히 출발해 점점 빨라짐","A 근처에 그림이 모이고, B로 갈수록 간격이 넓어집니다."],out:["빠르게 출발해 천천히 멈춤","B 근처에 그림이 모이고, A에 가까울수록 간격이 넓어집니다."],io:["천천히 출발해 천천히 멈춤","양 끝 근처에 그림이 모이고, 가운데 간격이 가장 넓어집니다."]}},
+zh:{code:"zh-Hans",title:"「ツメ指示」猜位游戏・动画师中间画体验",
+lv:["初级 1张","中级 2张","高级 3张","特级 4张"],md:["直线运动","弧线运动"],
+gd:"辅助线：",on:"开",off:"关",col:"：",rv:{line:"线",text:"文字",ring:"○框"},
+check:"评分",play:"播放",stop:"停止",next:"下一题",viewRv:"查看回顾",
+hint:"5题为一组。拖动圆圈来确定中间画的位置，然后点击“评分”。点击“播放”可以按每秒8帧查看动作。各难度上的数字表示中间画的张数。",
+desc:"请根据题目中的动作描述，在A到B之间移动1～4个间隔标记（ツメ指示）。\n关闭辅助线后，只会显示●。",
+rvh:"5题回顾",rvg:"黑色圆圈是你的答案，绿色虚线圆圈是正确位置。移动的圆点按每秒8帧播放。",again:"再玩5题",
+q:(n,m)=>"第"+n+"题 / 5　动作：「"+m+"」",
+sub:(N,B,arc)=>"帧：A（1）→ 中间画"+N+"张 → B（"+B+"）"+(arc?"　沿弧线放置":""),
+correct:"正确位置",lab:["◎ 完美","○ 接近","△ 有偏差"],pts:"分",item:i=>"第"+i+"张　",
+green:"绿色虚线圆圈是正确位置。",avg:"分（5题平均）",rvQ:i=>"第"+i+"题",rvAria:i=>"第"+i+"题回答的播放",
+svgAria:"在原画A与原画B之间放置中间画的线",
+e:{lin:["匀速","速度恒定，所以各处间隔相同。"],in:["慢起渐快","A附近的画面密集，越靠近B间隔越大。"],out:["快起渐慢","B附近的画面密集，越靠近A间隔越大。"],io:["慢起慢停","两端附近的画面密集，中间的间隔最大。"]}},
+fr:{code:"fr",title:"Jeu « Tsume Shiji » – Expérience d’intercalation pour animateur",
+lv:["Facile · 1","Moyen · 2","Difficile · 3","Expert · 4"],md:["Mouvement droit","Mouvement en arc"],
+gd:"Guide"+NB+": ",on:"ON",off:"OFF",col:NB+": ",rv:{line:"Ligne",text:"Texte",ring:"Cercles"},
+check:"Vérifier",play:"Lire",stop:"Arrêter",next:"Question suivante",viewRv:"Voir le bilan",
+hint:"Une série compte 5 questions. Faites glisser les cercles pour placer les intercalaires, puis appuyez sur « Vérifier ». « Lire » montre le mouvement à 8 images par seconde. Le nombre indiqué pour chaque niveau est le nombre d’intercalaires.",
+desc:"Entre A et B, déplacez de 1 à 4 « tsume shiji » (marques d’espacement des intercalaires) pour suivre le mouvement indiqué.\nSi vous désactivez le guide, seuls les points ● s’affichent.",
+rvh:"Bilan des 5 questions",rvg:"Les cercles noirs sont vos réponses ; les cercles verts en pointillés indiquent les positions correctes. Le point mobile est lu à 8 images par seconde.",again:"Rejouer 5 questions",
+q:(n,m)=>"Q"+n+" / 5　Mouvement"+NB+": « "+m+" »",
+sub:(N,B,arc)=>"Images"+NB+": A (1) → "+N+" intercalaire"+(N>1?"s":"")+" → B ("+B+")"+(arc?" – à placer le long de l’arc":""),
+correct:"Correct",lab:["◎ Parfait","○ Proche","△ Écart"],pts:" pts",item:i=>"n°"+i+"　",
+green:"Les cercles verts en pointillés indiquent les positions correctes.",avg:" pts (moyenne des 5)",rvQ:i=>"Q"+i,rvAria:i=>"Lecture de la réponse "+i,
+svgAria:"Ligne pour placer les intercalaires entre les dessins clés A et B",
+e:{lin:["Vitesse constante","La vitesse est constante, donc l’espacement est le même partout."],in:["Départ lent, puis accélération","Les dessins sont serrés près de A et l’espacement s’élargit vers B."],out:["Départ rapide, arrêt en douceur","Les dessins sont serrés près de B et l’espacement est le plus large près de A."],io:["Départ lent, arrêt lent","Les dessins sont serrés près des deux extrémités ; l’espacement est le plus large au milieu."]}},
+es:{code:"es",title:"Juego «Tsume Shiji»: experiencia de intercalado para animadores",
+lv:["Fácil · 1","Medio · 2","Difícil · 3","Experto · 4"],md:["Movimiento recto","Movimiento en arco"],
+gd:"Guía: ",on:"ON",off:"OFF",col:": ",rv:{line:"Línea",text:"Texto",ring:"Círculos"},
+check:"Comprobar",play:"Reproducir",stop:"Detener",next:"Siguiente pregunta",viewRv:"Ver repaso",
+hint:"Cada serie tiene 5 preguntas. Arrastra los círculos para colocar los intercalados y pulsa «Comprobar». «Reproducir» muestra el movimiento a 8 fotogramas por segundo. El número de cada nivel es la cantidad de intercalados.",
+desc:"Entre A y B, mueve de 1 a 4 «tsume shiji» (marcas de espaciado de los intercalados) según el movimiento indicado.\nSi desactivas la guía, solo se muestran los puntos ●.",
+rvh:"Repaso de las 5 preguntas",rvg:"Los círculos negros son tus respuestas; los círculos verdes de trazos son las posiciones correctas. El punto en movimiento se reproduce a 8 fotogramas por segundo.",again:"Jugar 5 más",
+q:(n,m)=>"P"+n+" / 5　Movimiento: «"+m+"»",
+sub:(N,B,arc)=>"Fotogramas: A (1) → "+N+" intercalado"+(N>1?"s":"")+" → B ("+B+")"+(arc?" – colócalos a lo largo del arco":""),
+correct:"Correcto",lab:["◎ Exacto","○ Cerca","△ Desviado"],pts:" pts",item:i=>"n.º "+i+"　",
+green:"Los círculos verdes de trazos muestran las posiciones correctas.",avg:" pts (promedio de 5)",rvQ:i=>"P"+i,rvAria:i=>"Reproducción de la respuesta "+i,
+svgAria:"Línea para colocar los intercalados entre los dibujos clave A y B",
+e:{lin:["Velocidad constante","La velocidad es constante, así que el espaciado es igual en todas partes."],in:["Empieza lento y acelera","Los dibujos se agrupan cerca de A y el espaciado se ensancha hacia B."],out:["Empieza rápido y frena","Los dibujos se agrupan cerca de B y el espaciado es mayor cerca de A."],io:["Arranque lento, parada lenta","Los dibujos se agrupan cerca de ambos extremos; el espaciado es mayor en el centro."]}},
+ar:{code:"ar",dir:"rtl",title:"لعبة «تسومي شيجي» – تجربة الرسوم الوسيطة للرسّامين",
+lv:["مبتدئ · 1","متوسط · 2","صعب · 3","خبير · 4"],md:["حركة مستقيمة","حركة قوسية"],
+gd:"خط الإرشاد: ",on:"تشغيل",off:"إيقاف",col:": ",rv:{line:"الخط",text:"النص",ring:"الدوائر"},
+check:"تحقق",play:"تشغيل",stop:"إيقاف",next:"السؤال التالي",viewRv:"عرض المراجعة",
+hint:"المجموعة الواحدة 5 أسئلة. اسحب الدوائر لتحديد مواضع الرسوم الوسيطة ثم اضغط «تحقق». يعرض «تشغيل» الحركة بمعدل 8 إطارات في الثانية. الرقم على كل مستوى هو عدد الرسوم الوسيطة.",
+desc:"بين A وB، حرّك من 1 إلى 4 من «تسومي شيجي» (علامات التباعد بين الرسوم الوسيطة) بما يتوافق مع الحركة المطلوبة.\nعند إيقاف خط الإرشاد تظهر النقاط ● فقط.",
+rvh:"مراجعة الأسئلة الخمسة",rvg:"الدوائر السوداء هي إجاباتك، والدوائر الخضراء المتقطعة هي المواضع الصحيحة. تُعرض النقطة المتحركة بمعدل 8 إطارات في الثانية.",again:"العب 5 أسئلة أخرى",
+q:(n,m)=>"السؤال "+n+" / 5　الحركة: «"+m+"»",
+sub:(N,B,arc)=>"الإطارات: A (1)، ثم "+N+" رسم وسيط، ثم B ("+B+")"+(arc?" – ضعها على امتداد القوس":""),
+correct:"الصحيح",lab:["◎ مطابق تمامًا","○ قريب","△ مبتعد"],pts:" نقطة",item:i=>"الرسم "+i+"　",
+green:"الدوائر الخضراء المتقطعة تمثل المواضع الصحيحة.",avg:" نقطة (متوسط الأسئلة الخمسة)",rvQ:i=>"س"+i,rvAria:i=>"تشغيل الإجابة "+i,
+svgAria:"خط لوضع الرسوم الوسيطة بين الرسمين المفتاحيين A وB",
+e:{lin:["سرعة ثابتة","السرعة ثابتة، لذا فالتباعد متساوٍ في كل مكان."],in:["تبدأ ببطء ثم تتسارع","تتجمع الرسوم قرب A ويتسع التباعد باتجاه B."],out:["تبدأ بسرعة ثم تتباطأ حتى التوقف","تتجمع الرسوم قرب B ويكون التباعد أوسع قرب A."],io:["بداية بطيئة ونهاية بطيئة","تتجمع الرسوم قرب الطرفين ويكون التباعد أوسع في المنتصف."]}}
+};
+let lang="ja";
+const T=()=>D[lang];
+const gdTxt=()=>T().gd+(guide?T().on:T().off);
+function rvBtn(b){const k=b.dataset.r,d=T();b.textContent=d.rv[k]+d.col+(rv[k]?d.on:d.off);b.setAttribute("aria-pressed",rv[k]);}
+function texts(){const d=T(),n=q.done?Qs.length:Qs.length+1;
+$("q").textContent=d.q(n,d.e[q.k][0]);
+$("sub").textContent=d.sub(q.N,q.N+2,q.arc);}
 function applyLang(){
-const en=lang=="en";
-document.documentElement.lang=en?"en":"ja";
-const tt=tr("「ツメ指示」当てゲーム・アニメーター中割り体験","“Tsume Shiji” Guessing Game – Animator In-Betweening Experience");
-document.title=tt;$("ttl").textContent=tt;
-$("lg").textContent=en?"日本語":"English";
-const ln=tr(["初級 1枚","中級 2枚","上級 3枚","特級 4枚"],["Easy · 1","Medium · 2","Hard · 3","Expert · 4"]);
-document.querySelectorAll("#lv button").forEach((b,i)=>b.textContent=ln[i]);
-const mn=tr(["直線の動き","弧を描く動き"],["Straight motion","Arc motion"]);
-document.querySelectorAll("#md button").forEach((b,i)=>b.textContent=mn[i]);
-$("gd").textContent=tr("ガイド線：","Guide line: ")+(guide?"ON":"OFF");
-$("grade").textContent=tr("採点","Check");
-$("play").textContent=timer?tr("停止","Stop"):tr("再生","Play");
-$("next").textContent=q&&q.done&&Qs.length>=5?tr("振り返りを見る","View review"):tr("次の問題","Next question");
-$("hint").textContent=tr("5問で1セットです。丸をドラッグして中割りの位置を決め、「採点」を押します。「再生」で1秒8コマの動きを確認できます。","One set is 5 questions. Drag the circles to place the in-betweens, then press “Check”. “Play” shows the motion at 8 frames per second. The number on each level is the number of in-betweens.");
-$("desc").textContent=tr("AからBまでの間に、お題の動きの文章に合わせて、\n1個〜4個のツメ指示を移動させて下さい。\nガイド線をOFFにすると、⚫︎だけ表示されます。","Between A and B, move 1 to 4 “tsume-shiji” (in-between spacing marks) to match the motion in the prompt.\nTurn the guide line OFF and only the dots are shown.");
-$("rvh").textContent=tr("5問の振り返り","Review of 5 questions");
-$("rvg").textContent=tr("黒い丸があなたの回答、緑の点線の丸が正解です。動く丸は1秒8コマの再生です。","Black circles are your answers; green dashed circles are the correct positions. The moving dot plays at 8 frames per second.");
-$("again").textContent=tr("もう一度5問やる","Play 5 more");
+const d=T();
+document.documentElement.lang=d.code;document.documentElement.dir=d.dir||"ltr";
+document.title=d.title;$("ttl").textContent=d.title;
+$("lg").value=lang;
+document.querySelectorAll("#lv button").forEach((b,i)=>b.textContent=d.lv[i]);
+document.querySelectorAll("#md button").forEach((b,i)=>b.textContent=d.md[i]);
+$("gd").textContent=gdTxt();
+$("grade").textContent=d.check;
+$("play").textContent=timer?d.stop:d.play;
+$("next").textContent=q&&q.done&&Qs.length>=5?d.viewRv:d.next;
+$("hint").textContent=d.hint;
+$("desc").textContent=d.desc;
+$("svg").setAttribute("aria-label",d.svgAria);
+$("rvh").textContent=d.rvh;
+$("rvg").textContent=d.rvg;
+$("again").textContent=d.again;
 document.querySelectorAll("#rvt button").forEach(rvBtn);
 if(q)texts();
 if(!$("rv").hidden)showReview();else if(q&&q.done&&q.sr)q.sr();
@@ -128,7 +217,7 @@ q={k,N:L.n,arc,ax,ay,bx,by,cx:(ax+bx)/2+(arc?rnd(-30,30):0),cy,pos,done:false,an
 texts();
 $("svg").setAttribute("viewBox",arc?"0 0 360 190":"0 0 360 150");
 $("res").innerHTML="";
-$("grade").disabled=false;$("next").classList.remove("main");$("grade").classList.add("main");$("next").disabled=true;$("next").textContent=tr("次の問題","Next question");
+$("grade").disabled=false;$("next").classList.remove("main");$("grade").classList.add("main");$("next").disabled=true;$("next").textContent=T().next;
 draw();
 }
 function key(x,y,c,l){return `<circle cx="${x}" cy="${y}" r="15" fill="${c}"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${l}</text>`;}
@@ -136,7 +225,7 @@ function build(ph){const sh=guide||q.done,o=inRv?rv:timer?{line:0,text:0,ring:0}
 let s=`<path d="M${q.ax} ${q.ay}Q${q.cx} ${q.cy} ${q.bx} ${q.by}" fill="none" stroke="${o.line?"var(--line)":"none"}" stroke-width="3" stroke-linecap="round"/>`;
 s+=key(q.ax,q.ay,"var(--a)",o.text?"A":"")+key(q.bx,q.by,"var(--b)",o.text?"B":"");
 if(q.done){
-if(!q.arc&&o.text)s+=`<text x="${q.ax-14}" y="146" font-size="12" fill="var(--ok)">${tr("正解の位置","Correct")}</text>`;
+if(!q.arc&&o.text)s+=`<text x="${q.ax-14}" y="146" font-size="12" fill="var(--ok)">${T().correct}</text>`;
 q.ans.forEach((t,i)=>{const [x,y0]=pt(t),y=y0+(q.arc?0:37);
 s+=`${q.arc||!o.line?"":`<line x1="${x}" x2="${x}" y1="${y0}" y2="${y}" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="3 3"/>`}${o.ring?`<circle cx="${x}" cy="${y}" r="12" fill="none" stroke="var(--ok)" stroke-width="2" stroke-dasharray="4 3"/>`:""}${o.text?`<text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" fill="var(--ok)">${i+1}</text>`:""}`;});
 }
@@ -149,11 +238,11 @@ if(ph.c!=null){const [x,y]=pt(ph.c);s+=`<circle cx="${x}" cy="${y+(q.arc?0:37)}"
 return s;}
 function draw(ph){$("svg").innerHTML=build(ph);
 }
-function stop(){clearInterval(timer);timer=null;$("play").textContent=tr("再生","Play");if(q)draw();}
+function stop(){clearInterval(timer);timer=null;$("play").textContent=T().play;if(q)draw();}
 function play(){
 if(timer){stop();return;}
 const u=[0,...q.pos.slice().sort((a,b)=>a-b),1],c=[0,...q.ans,1];
-let i=0;$("play").textContent=tr("停止","Stop");
+let i=0;$("play").textContent=T().stop;
 const tk=()=>{const k=Math.min(i%(u.length+2),u.length-1);draw({u:u[k],c:q.done?c[k]:null});i++;};timer=setInterval(tk,125);tk();
 }
 function grade(){
@@ -163,9 +252,9 @@ const e=q.pos.map((t,i)=>Math.abs(t-q.ans[i]));
 const p=e.map(x=>Math.max(0,1-x/.12));
 const sc=Math.round(p.reduce((a,b)=>a+b,0)/p.length*100);
 q.sc=sc;Qs.push(q);
-const lab=x=>x<.04?tr("◎ ぴったり","◎ Spot on"):x<.08?tr("○ 近い","○ Close"):tr("△ ズレあり","△ Off");
-q.sr=()=>$("res").innerHTML=`<div class="score">${sc}<small>${tr("点"," pts")}</small></div><ul>${e.map((x,i)=>`<li>${tr((i+1)+"枚目　","#"+(i+1)+"　")}${lab(x)}</li>`).join("")}</ul><p style="margin:6px 0">${tr(EAS[q.k].t,EN[q.k].t)}</p><p class="mute">${tr("緑の点線の丸が正解の位置です。","Green dashed circles show the correct positions.")}</p>`;
-q.sr();$("grade").disabled=true;$("grade").classList.remove("main");$("next").classList.add("main");$("next").disabled=false;$("next").textContent=Qs.length>=5?tr("振り返りを見る","View review"):tr("次の問題","Next question");
+const lab=x=>T().lab[x<.04?0:x<.08?1:2];
+q.sr=()=>{const d=T();$("res").innerHTML=`<div class="score">${sc}<small>${d.pts}</small></div><ul>${e.map((x,i)=>`<li>${d.item(i+1)}${lab(x)}</li>`).join("")}</ul><p style="margin:6px 0">${d.e[q.k][1]}</p><p class="mute">${d.green}</p>`;};
+q.sr();$("grade").disabled=true;$("grade").classList.remove("main");$("next").classList.add("main");$("next").disabled=false;$("next").textContent=Qs.length>=5?T().viewRv:T().next;
 draw();
 }
 const svg=$("svg");
@@ -199,8 +288,8 @@ function showReview(){
 stop();
 $("mc").hidden=true;$("rv").hidden=false;
 const avg=Math.round(Qs.reduce((a,b)=>a+b.sc,0)/Qs.length);
-$("rvs").innerHTML=avg+"<small>"+tr("点（5問の平均）"," pts (average of 5)")+"</small>";
-$("rvl").innerHTML=Qs.map((Q,i)=>`<p class="sub" style="margin-top:12px"><b>${tr("第"+(i+1)+"問","Q"+(i+1))}</b>　${tr(EAS[Q.k].n,EN[Q.k].n)}　${Q.sc}${tr("点"," pts")}</p><svg id="rv${i}" viewBox="0 0 360 ${Q.arc?190:150}" role="img" aria-label="${tr("第"+(i+1)+"問の回答の再生","Playback of answer "+(i+1))}"></svg>`).join("");
+$("rvs").innerHTML=avg+"<small>"+T().avg+"</small>";
+$("rvl").innerHTML=Qs.map((Q,i)=>{const d=T();return `<p class="sub" style="margin-top:12px"><b>${d.rvQ(i+1)}</b>　${d.e[Q.k][0]}　${Q.sc}${d.pts}</p><svg id="rv${i}" viewBox="0 0 360 ${Q.arc?190:150}" role="img" aria-label="${d.rvAria(i+1)}"></svg>`;}).join("");
 let f=0;
 const tick=()=>{const keep=q;inRv=true;Qs.forEach((Q,i)=>{q=Q;const u=[0,...Q.pos,1],c=[0,...Q.ans,1],k=Math.min(f%(u.length+2),u.length-1);$("rv"+i).innerHTML=build({u:u[k],c:c[k]});});q=keep;inRv=false;f++;};
 tick();clearInterval(rt);rt=setInterval(tick,125);
@@ -208,8 +297,8 @@ window.scrollTo(0,0);
 }
 $("again").onclick=newSet;
 $("rvt").onclick=ev=>{const b=ev.target.closest("button");if(!b)return;const k=b.dataset.r;rv[k]=!rv[k];rvBtn(b);};
-$("lg").onclick=()=>{lang=lang=="en"?"ja":"en";applyLang();};
-$("gd").onclick=()=>{guide=!guide;$("gd").setAttribute("aria-pressed",guide);$("gd").textContent=tr("ガイド線：","Guide line: ")+(guide?"ON":"OFF");if(q)draw();};
+$("lg").onchange=()=>{lang=$("lg").value;applyLang();};
+$("gd").onclick=()=>{guide=!guide;$("gd").setAttribute("aria-pressed",guide);$("gd").textContent=gdTxt();if(q)draw();};
 newSet();
 </script>
 </body>
