@@ -72,7 +72,7 @@ button:focus-visible{outline:3px solid var(--b);outline-offset:2px}
 <p class="q" id="rvh">5問の振り返り</p>
 <div class="score" id="rvs"></div>
 <p class="mute" id="rvg">黒い丸があなたの回答、緑の点線の丸が正解です。動く丸は1秒8コマの再生です。</p>
-<div class="tgs" id="rvt"><button class="tg" data-r="line" data-n="線" aria-pressed="true">線：ON</button><button class="tg" data-r="text" data-n="文字" aria-pressed="true">文字：ON</button><button class="tg" data-r="ring" data-n="○枠" aria-pressed="true">○枠：ON</button></div>
+<div class="tgs" id="rvt"><button class="tg" data-r="line" data-n="線" aria-pressed="true">線：ON</button><button class="tg" data-r="ring" data-n="○枠" aria-pressed="true">○枠：ON</button></div>
 <div id="rvl"></div>
 <div class="row"><button id="again" class="main">もう一度5問やる</button></div>
 </div>
@@ -224,7 +224,7 @@ $("grade").disabled=false;$("next").classList.remove("main");$("grade").classLis
 draw();
 }
 function key(x,y,c,l){return `<circle cx="${x}" cy="${y}" r="15" fill="${c}"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${l}</text>`;}
-function build(ph){const sh=guide||q.done,o=inRv?rv:timer?{line:0,text:0,ring:0}:{line:sh,text:sh,ring:1,dot:!sh};
+function build(ph){const sh=guide||q.done,o=inRv?{line:rv.line,ring:rv.ring,text:rv.ring}:timer?{line:0,text:0,ring:0}:{line:sh,text:sh,ring:1,dot:!sh};
 let s=`<path d="M${q.ax} ${q.ay}Q${q.cx} ${q.cy} ${q.bx} ${q.by}" fill="none" stroke="${o.line?"var(--line)":"none"}" stroke-width="3" stroke-linecap="round"/>`;
 s+=key(q.ax,q.ay,"var(--a)",o.text?"A":"")+key(q.bx,q.by,"var(--b)",o.text?"B":"");
 if(q.done){
@@ -252,10 +252,10 @@ function grade(){
 stop();
 q.pos.sort((a,b)=>a-b);q.done=true;
 const e=q.pos.map((t,i)=>Math.abs(t-q.ans[i]));
-const p=e.map(x=>Math.max(0,1-x/.12));
+const p=e.map(x=>Math.max(0,Math.min(1,1-Math.max(0,x-.03)/.30)));
 const sc=Math.round(p.reduce((a,b)=>a+b,0)/p.length*100);
 q.sc=sc;Qs.push(q);
-const lab=x=>T().lab[x<.04?0:x<.08?1:2];
+const lab=x=>T().lab[x<.07?0:x<.14?1:2];
 q.sr=()=>{const d=T();$("res").innerHTML=`<div class="score">${sc}<small>${d.pts}</small></div><ul>${e.map((x,i)=>`<li>${d.item(i+1)}${lab(x)}</li>`).join("")}</ul><p style="margin:6px 0">${d.e[q.k][1]}</p><p class="mute">${d.green}</p>`;};
 q.sr();$("grade").disabled=true;$("grade").classList.remove("main");$("next").classList.add("main");$("next").disabled=false;$("next").textContent=Qs.length>=5?T().viewRv:T().next;
 draw();
